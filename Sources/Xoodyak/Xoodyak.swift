@@ -128,7 +128,6 @@ public struct Xoodyak {
     public mutating func encrypt<D: DataProtocol, M: MutableDataProtocol>(from plaintext: D, to ciphertext: inout M) {
         precondition(mode == .keyed)
         crypt(from: plaintext, to: &ciphertext, decrypt: false)
-        
     }
     
     public mutating func decrypt<D: DataProtocol, M: MutableDataProtocol>(from ciphertext: D, to plaintext: inout M) {
