@@ -2,7 +2,7 @@ import Foundation
 
 extension DataProtocol {
     func blocks(rate: Int) -> Blocks<Self> {
-        return Blocks<Self>(data: self, rate: rate)
+        Blocks<Self>(data: self, rate: rate)
     }
 }
 
@@ -11,7 +11,7 @@ struct Blocks<D: DataProtocol>: Sequence {
     let rate: Int
     
     func makeIterator() -> BlocksIterator<D> {
-        return BlocksIterator<D>(data, rate)
+        BlocksIterator<D>(data, rate)
     }
 }
 

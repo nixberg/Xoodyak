@@ -2,29 +2,11 @@
   "object": {
     "pins": [
       {
-        "package": "Clibsodium",
-        "repositoryURL": "https://github.com/tiwoc/Clibsodium.git",
-        "state": {
-          "branch": null,
-          "revision": "2ac72772aae26b2da0b15c253d9bb79ba452f66a",
-          "version": "1.0.0"
-        }
-      },
-      {
-        "package": "Sodium",
-        "repositoryURL": "https://github.com/jedisct1/swift-sodium",
-        "state": {
-          "branch": null,
-          "revision": "5900a54dea817befa18f3148889fe922a38afe7f",
-          "version": "0.8.0"
-        }
-      },
-      {
         "package": "Xoodoo",
         "repositoryURL": "https://github.com/nixberg/Xoodoo",
         "state": {
           "branch": "master",
-          "revision": "cbac4658e44b241b52d527ec93eefb1509117fa9",
+          "revision": "3df786584b3b7b6cb938cb2fa43cf9aba4a3cd77",
           "version": null
         }
       }
