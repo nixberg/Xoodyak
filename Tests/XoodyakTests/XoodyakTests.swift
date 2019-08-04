@@ -56,8 +56,19 @@ final class XoodyakTests: XCTestCase {
             var newCT = [UInt8]()
             xoodyak.encrypt(from: ptBytes, to: &newCT)
             xoodyak.squeeze(count: 16, to: &newCT)
-
+            
             XCTAssertEqual(newCT, ctBytes)
+            
+            xoodyak = Xoodyak(key: keyBytes, id: [], counter: [])
+            xoodyak.absorb(from: nonceBytes)
+            xoodyak.absorb(from: adBytes)
+            var newPT = [UInt8]()
+            xoodyak.decrypt(from: ctBytes.prefix(ptBytes.count), to: &newPT)
+            var newTag = [UInt8]()
+            xoodyak.squeeze(count: 16, to: &newTag)
+            
+            XCTAssertEqual(newPT, ptBytes)
+            XCTAssertEqual(newTag, ctBytes.suffix(16))
         }
     }
     
