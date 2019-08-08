@@ -19,15 +19,15 @@ final class XoodyakTests: XCTestCase {
         let kats = try! JSONDecoder().decode([KAT].self, from: data)
         
         for kat in kats {
-            let msgBytes = kat.msg.hexToBytes()
-            let mdBytes = kat.md.hexToBytes()
+            let msg = kat.msg.hexToBytes()
+            let md = kat.md.hexToBytes()
             
             var xoodyak = Xoodyak()
-            xoodyak.absorb(from: msgBytes)
+            xoodyak.absorb(from: msg)
             var newMD = [UInt8](0..<32)
-            xoodyak.squeeze(count: mdBytes.count, to: &newMD)
+            xoodyak.squeeze(count: md.count, to: &newMD)
             
-            XCTAssertEqual(newMD[32...], mdBytes[...])
+            XCTAssertEqual(newMD[32...], md[...])
         }
     }
     
@@ -44,31 +44,31 @@ final class XoodyakTests: XCTestCase {
         let kats = try! JSONDecoder().decode([KAT].self, from: data)
         
         for kat in kats {
-            let keyBytes = kat.key.hexToBytes()
-            let nonceBytes = kat.nonce.hexToBytes()
-            let ptBytes = kat.pt.hexToBytes()
-            let adBytes = kat.ad.hexToBytes()
-            let ctBytes = kat.ct.hexToBytes()
+            let key = kat.key.hexToBytes()
+            let nonce = kat.nonce.hexToBytes()
+            let pt = kat.pt.hexToBytes()
+            let ad = kat.ad.hexToBytes()
+            let ct = kat.ct.hexToBytes()
             
-            var xoodyak = Xoodyak(key: keyBytes, id: [], counter: [])
-            xoodyak.absorb(from: nonceBytes)
-            xoodyak.absorb(from: adBytes)
+            var xoodyak = Xoodyak(key: key, id: [], counter: [])
+            xoodyak.absorb(from: nonce)
+            xoodyak.absorb(from: ad)
             var newCT = [UInt8](0..<32)
-            xoodyak.encrypt(from: ptBytes, to: &newCT)
+            xoodyak.encrypt(from: pt, to: &newCT)
             xoodyak.squeeze(count: 16, to: &newCT)
             
-            XCTAssertEqual(newCT[32...], ctBytes[...])
+            XCTAssertEqual(newCT[32...], ct[...])
             
-            xoodyak = Xoodyak(key: keyBytes, id: [], counter: [])
-            xoodyak.absorb(from: nonceBytes)
-            xoodyak.absorb(from: adBytes)
+            xoodyak = Xoodyak(key: key, id: [], counter: [])
+            xoodyak.absorb(from: nonce)
+            xoodyak.absorb(from: ad)
             var newPT = [UInt8](0..<32)
-            xoodyak.decrypt(from: ctBytes.prefix(ptBytes.count), to: &newPT)
+            xoodyak.decrypt(from: ct.prefix(pt.count), to: &newPT)
             var newTag = [UInt8]()
             xoodyak.squeeze(count: 16, to: &newTag)
             
-            XCTAssertEqual(newPT[32...], ptBytes[...])
-            XCTAssertEqual(newTag, ctBytes.suffix(16))
+            XCTAssertEqual(newPT[32...], pt[...])
+            XCTAssertEqual(newTag, ct.suffix(16))
         }
     }
     
