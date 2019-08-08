@@ -6,15 +6,23 @@ let package = Package(
     name: "Xoodyak",
     products: [
         .library(
+            name: "Xoodoo",
+            targets: ["Xoodoo"]),
+        .library(
             name: "Xoodyak",
             targets: ["Xoodyak"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/nixberg/Xoodoo", .branch("master")),
     ],
     targets: [
         .target(
+            name: "Xoodoo",
+            dependencies: []),
+        .target(
             name: "Xoodyak",
+            dependencies: ["Xoodoo"]),
+        .testTarget(
+            name: "XoodooTests",
             dependencies: ["Xoodoo"]),
         .testTarget(
             name: "XoodyakTests",
