@@ -51,27 +51,27 @@ public struct Xoodyak {
         var data = [UInt8](key)
         data.append(contentsOf: id)
         data.append(UInt8(id.count))
-        absorbAny(from: data, rate: rates.absorb, flag: .absorbKey)
+        absorbAny(data, rate: rates.absorb, flag: .absorbKey)
         
         if !counter.isEmpty {
-            absorbAny(from: counter, rate: 1, flag: .zero)
+            absorbAny(counter, rate: 1, flag: .zero)
         }
     }
     
     // Internal interface:
     
-    mutating func absorbAny<D: DataProtocol>(from data: D, rate: Int, flag downFlag: Flag) {
+    mutating func absorbAny<D: DataProtocol>(_ input: D, rate: Int, flag downFlag: Flag) {
         var downFlag = downFlag
-        for block in data.blocks(rate: rate) {
+        for block in input.blocks(rate: rate) {
             if phase != .up {
                 up(flag: .zero)
             }
-            down(from: block, flag: downFlag)
+            down(block, flag: downFlag)
             downFlag = .zero
         }
     }
     
-    mutating func crypt<D: DataProtocol, M: MutableDataProtocol>(from input: D, to output: inout M, decrypt: Bool) {
+    mutating func crypt<D: DataProtocol, M: MutableDataProtocol>(_ input: D, to output: inout M, decrypt: Bool) {
         var flag = Flag.crypt
         for block in input.blocks(rate: Rates.output) {
             up(flag: flag)
@@ -80,23 +80,23 @@ public struct Xoodyak {
                 output.append(byte ^ xoodoo[i])
             }
             if decrypt {
-                down(from: output.suffix(block.count), flag: .zero)
+                down(output.suffix(block.count), flag: .zero)
             } else {
-                down(from: block, flag: .zero)
+                down(block, flag: .zero)
             }
         }
     }
     
-    mutating func squeezeAny<M: MutableDataProtocol>(count: Int, to buffer: inout M, flag upFlag: Flag) {
-        let initialCount = buffer.count
-        up(count: min(count, rates.squeeze), to: &buffer, flag: upFlag)
-        while buffer.count - initialCount < count {
-            down(from: [], flag: .zero)
-            up(count: min(count - buffer.count + initialCount, rates.squeeze), to: &buffer, flag: .zero)
+    mutating func squeezeAny<M: MutableDataProtocol>(to output: inout M, count: Int, flag upFlag: Flag) {
+        let initialCount = output.count
+        up(to: &output, count: min(count, rates.squeeze), flag: upFlag)
+        while output.count - initialCount < count {
+            down([], flag: .zero)
+            up(to: &output, count: min(count - output.count + initialCount, rates.squeeze), flag: .zero)
         }
     }
     
-    mutating func down<D: DataProtocol>(from block: D, flag: Flag) {
+    mutating func down<D: DataProtocol>(_ block: D, flag: Flag) {
         phase = .down
         for (i, byte) in block.enumerated() {
             xoodoo[i] ^= byte
@@ -113,7 +113,7 @@ public struct Xoodyak {
         xoodoo.permute()
     }
     
-    mutating func up<M: MutableDataProtocol>(count: Int, to block: inout M, flag: Flag) {
+    mutating func up<M: MutableDataProtocol>(to block: inout M, count: Int, flag: Flag) {
         up(flag: flag)
         for i in 0..<count {
             block.append(xoodoo[i])
@@ -122,33 +122,63 @@ public struct Xoodyak {
 
     // Public interface:
     
-    public mutating func absorb<D: DataProtocol>(from data: D) {
-        absorbAny(from: data, rate: rates.absorb, flag: .absorb)
+    public mutating func absorb<D: DataProtocol>(_ input: D) {
+        absorbAny(input, rate: rates.absorb, flag: .absorb)
     }
     
-    public mutating func encrypt<D: DataProtocol, M: MutableDataProtocol>(from plaintext: D, to ciphertext: inout M) {
+    public mutating func encrypt<D: DataProtocol, M: MutableDataProtocol>(_ plaintext: D, to ciphertext: inout M) {
         precondition(mode == .keyed)
-        crypt(from: plaintext, to: &ciphertext, decrypt: false)
+        crypt(plaintext, to: &ciphertext, decrypt: false)
     }
     
-    public mutating func decrypt<D: DataProtocol, M: MutableDataProtocol>(from ciphertext: D, to plaintext: inout M) {
+    public mutating func decrypt<D: DataProtocol, M: MutableDataProtocol>(_ ciphertext: D, to plaintext: inout M) {
         precondition(mode == .keyed)
-        crypt(from: ciphertext, to: &plaintext, decrypt: true)
+        crypt(ciphertext, to: &plaintext, decrypt: true)
     }
 
-    public mutating func squeeze<M: MutableDataProtocol>(count: Int, to buffer: inout M) {
-        squeezeAny(count: count, to: &buffer, flag: .squeeze)
+    public mutating func squeeze<M: MutableDataProtocol>(to output: inout M, count: Int) {
+        squeezeAny(to: &output, count: count, flag: .squeeze)
     }
     
-    public mutating func squeezeKey<M: MutableDataProtocol>(count: Int, to buffer: inout M) {
+    public mutating func squeezeKey<M: MutableDataProtocol>(to output: inout M, count: Int) {
         precondition(mode == .keyed)
-        squeezeAny(count: count, to: &buffer, flag: .squeezeKey)
+        squeezeAny(to: &output, count: count, flag: .squeezeKey)
     }
     
     public mutating func ratchet() {
         precondition(mode == .keyed)
         var buffer = [UInt8]()
-        squeezeAny(count: Rates.ratchet, to: &buffer, flag: .ratchet)
-        absorbAny(from: buffer, rate: rates.absorb, flag: .zero)
+        squeezeAny(to: &buffer, count: Rates.ratchet, flag: .ratchet)
+        absorbAny(buffer, rate: rates.absorb, flag: .zero)
+    }
+}
+
+extension Xoodyak {
+    public mutating func encrypt<D: DataProtocol>(_ plaintext: D) -> [UInt8] {
+        var output = [UInt8]()
+        output.reserveCapacity(plaintext.count + 16)
+        encrypt(plaintext, to: &output)
+        return output
+    }
+    
+    public mutating func decrypt<D: DataProtocol>(_ ciphertext: D) -> [UInt8] {
+        var output = [UInt8]()
+        output.reserveCapacity(ciphertext.count + 16)
+        decrypt(ciphertext, to: &output)
+        return output
+    }
+    
+    public mutating func squeeze(count: Int) -> [UInt8] {
+        var output = [UInt8]()
+        output.reserveCapacity(count)
+        squeeze(to: &output, count: count)
+        return output
+    }
+    
+    public mutating func squeezeKey(count: Int) -> [UInt8] {
+        var output = [UInt8]()
+        output.reserveCapacity(count)
+        squeezeKey(to: &output, count: count)
+        return output
     }
 }
