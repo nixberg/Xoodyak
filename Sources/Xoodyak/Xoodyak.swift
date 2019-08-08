@@ -88,10 +88,11 @@ public struct Xoodyak {
     }
     
     mutating func squeezeAny<M: MutableDataProtocol>(count: Int, to buffer: inout M, flag upFlag: Flag) {
+        let initialCount = buffer.count
         up(count: min(count, rates.squeeze), to: &buffer, flag: upFlag)
-        while buffer.count < count {
+        while buffer.count - initialCount < count {
             down(from: [], flag: .zero)
-            up(count: min(count - buffer.count, rates.squeeze), to: &buffer, flag: .zero)
+            up(count: min(count - buffer.count + initialCount, rates.squeeze), to: &buffer, flag: .zero)
         }
     }
     

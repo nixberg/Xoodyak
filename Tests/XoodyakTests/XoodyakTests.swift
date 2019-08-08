@@ -15,7 +15,7 @@ final class XoodyakTests: XCTestCase {
             let md: String
         }
         
-        let data = try! Data(contentsOf: path(for: "HashKAT.json"))
+        let data = try! Data(contentsOf: path(for: "kats/hash.json"))
         let kats = try! JSONDecoder().decode([KAT].self, from: data)
         
         for kat in kats {
@@ -40,7 +40,7 @@ final class XoodyakTests: XCTestCase {
             let ct: String
         }
         
-        let data = try! Data(contentsOf: path(for: "AEADKAT.json"))
+        let data = try! Data(contentsOf: path(for: "kats/aead.json"))
         let kats = try! JSONDecoder().decode([KAT].self, from: data)
         
         for kat in kats {
