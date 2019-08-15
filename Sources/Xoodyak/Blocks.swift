@@ -6,7 +6,7 @@ extension DataProtocol {
     }
 }
 
-struct Blocks<D: DataProtocol>: Sequence {
+struct Blocks<D>: Sequence where D: DataProtocol{
     let data: D
     let rate: Int
     
@@ -15,7 +15,7 @@ struct Blocks<D: DataProtocol>: Sequence {
     }
 }
 
-struct BlocksIterator<D: DataProtocol>: IteratorProtocol {
+struct BlocksIterator<D>: IteratorProtocol where D: DataProtocol {
     var data: D.SubSequence
     let rate: Int
     var firstBlock = true
