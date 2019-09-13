@@ -4,6 +4,7 @@ import XoodooTests
 import XoodyakTests
 
 var tests = [XCTestCaseEntry]()
-tests += XoodooTests.allTests()
-tests += XoodyakTests.allTests()
+tests += XoodooTests.__allTests()
+tests += XoodyakTests.__allTests()
+
 XCTMain(tests)
