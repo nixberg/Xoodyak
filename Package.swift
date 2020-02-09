@@ -6,9 +6,6 @@ let package = Package(
     name: "Xoodyak",
     products: [
         .library(
-            name: "Xoodoo",
-            targets: ["Xoodoo"]),
-        .library(
             name: "Xoodyak",
             targets: ["Xoodyak"]),
     ],
