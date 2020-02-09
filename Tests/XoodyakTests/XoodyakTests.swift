@@ -19,8 +19,8 @@ final class XoodyakTests: XCTestCase {
         let kats = try! JSONDecoder().decode([KAT].self, from: data)
         
         for kat in kats {
-            let msg = kat.msg.hexToBytes()
-            let md = kat.md.hexToBytes()
+            let msg = [UInt8](hex: kat.msg)
+            let md = [UInt8](hex: kat.md)
             
             var xoodyak = Xoodyak()
             xoodyak.absorb(msg)
@@ -43,12 +43,12 @@ final class XoodyakTests: XCTestCase {
         let data = try! Data(contentsOf: path(for: "kats/aead.json"))
         let kats = try! JSONDecoder().decode([KAT].self, from: data)
         
-        for kat in kats {
-            let key = kat.key.hexToBytes()
-            let nonce = kat.nonce.hexToBytes()
-            let pt = kat.pt.hexToBytes()
-            let ad = kat.ad.hexToBytes()
-            let ct = kat.ct.hexToBytes()
+        for kat in kats  {
+            let key = [UInt8](hex: kat.key)
+            let nonce = [UInt8](hex: kat.nonce)
+            let pt = [UInt8](hex: kat.pt)
+            let ad = [UInt8](hex: kat.ad)
+            let ct = [UInt8](hex: kat.ct)
             let tagCount = ct.count - pt.count
             
             var xoodyak = Xoodyak(key: key, id: [], counter: [])
@@ -73,12 +73,13 @@ final class XoodyakTests: XCTestCase {
     }
 }
 
-extension String {
-    func hexToBytes() -> [UInt8] {
-        stride(from: 0, to: count, by: 2).map {
-            self[index(startIndex, offsetBy: $0)..<index(startIndex, offsetBy: $0 + 2)]
-        }.map {
-            UInt8($0, radix: 16)!
+fileprivate extension Array where Element == UInt8 {
+    init(hex: String) {
+        precondition(hex.count.isMultiple(of: 2))
+        var hex = hex[...]
+        self = stride(from: 0, to: hex.count, by: 2).map { _ in
+            defer { hex = hex.dropFirst(2) }
+            return UInt8(hex.prefix(2), radix: 16)!
         }
     }
 }
