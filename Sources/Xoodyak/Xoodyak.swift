@@ -58,20 +58,48 @@ public struct Xoodyak {
         }
     }
     
-    // Internal interface:
+    private mutating func down(_ flag: Flag) {
+        phase = .down
+        xoodoo[0] ^= 0x01
+        xoodoo[47] ^= (mode == .hash) ? (flag.rawValue & 0x01) : flag.rawValue
+    }
     
-    mutating func absorbAny<D>(_ input: D, rate: Int, flag downFlag: Flag) where D: DataProtocol {
-        var downFlag = downFlag
+    private mutating func down<D>(_ block: D, _ flag: Flag) where D: DataProtocol {
+        phase = .down
+        for (i, byte) in block.enumerated() {
+            xoodoo[i] ^= byte
+        }
+        xoodoo[block.count] ^= 0x01
+        xoodoo[47] ^= (mode == .hash) ? (flag.rawValue & 0x01) : flag.rawValue
+    }
+    
+    private mutating func up(_ flag: Flag) {
+        phase = .up
+        if mode != .hash {
+            xoodoo[47] ^= flag.rawValue
+        }
+        xoodoo.permute()
+    }
+    
+    private mutating func up<M>(_ count: Int, to block: inout M, _ flag: Flag) where M: MutableDataProtocol {
+        up(flag)
+        for i in 0..<count {
+            block.append(xoodoo[i])
+        }
+    }
+    
+    private mutating func absorbAny<D>(_ input: D, rate: Int, flag: Flag) where D: DataProtocol {
+        var flag = flag
         for block in input.blocks(rate: rate) {
             if phase != .up {
                 up(.zero)
             }
-            down(block, downFlag)
-            downFlag = .zero
+            down(block, flag)
+            flag = .zero
         }
     }
     
-    mutating func crypt<D, M>(_ input: D, to output: inout M, decrypt: Bool) where D: DataProtocol, M: MutableDataProtocol {
+    private mutating func crypt<D, M>(_ input: D, to output: inout M, decrypt: Bool) where D: DataProtocol, M: MutableDataProtocol {
         var flag = Flag.crypt
         for block in input.blocks(rate: Rates.output) {
             up(flag)
@@ -87,46 +115,14 @@ public struct Xoodyak {
         }
     }
     
-    mutating func squeezeAny<M>(_ count: Int, to output: inout M, flag upFlag: Flag) where M: MutableDataProtocol  {
+    private mutating func squeezeAny<M>(_ count: Int, to output: inout M, flag: Flag) where M: MutableDataProtocol  {
         let initialCount = output.count
-        up(min(count, rates.squeeze), to: &output, upFlag)
+        up(min(count, rates.squeeze), to: &output, flag)
         while output.count - initialCount < count {
             down(.zero)
             up(min(count - output.count + initialCount, rates.squeeze), to: &output, .zero)
         }
     }
-    
-    mutating func down(_ flag: Flag) {
-        phase = .down
-        xoodoo[0] ^= 0x01
-        xoodoo.last ^= (mode == .hash) ? (flag.rawValue & 0x01) : flag.rawValue
-    }
-    
-    mutating func down<D>(_ block: D, _ flag: Flag) where D: DataProtocol {
-        phase = .down
-        for (i, byte) in block.enumerated() {
-            xoodoo[i] ^= byte
-        }
-        xoodoo[block.count] ^= 0x01
-        xoodoo.last ^= (mode == .hash) ? (flag.rawValue & 0x01) : flag.rawValue
-    }
-    
-    mutating func up(_ flag: Flag) {
-        phase = .up
-        if mode != .hash {
-            xoodoo.last ^= flag.rawValue
-        }
-        xoodoo.permute()
-    }
-    
-    mutating func up<M>(_ count: Int, to block: inout M, _ flag: Flag) where M: MutableDataProtocol {
-        up(flag)
-        for i in 0..<count {
-            block.append(xoodoo[i])
-        }
-    }
-
-    // Public interface:
     
     public mutating func absorb<D>(_ input: D) where D: DataProtocol {
         absorbAny(input, rate: rates.absorb, flag: .absorb)
@@ -141,7 +137,7 @@ public struct Xoodyak {
         precondition(mode == .keyed)
         crypt(ciphertext, to: &plaintext, decrypt: true)
     }
-
+    
     public mutating func squeeze<M>(_ count: Int, to output: inout M) where M: MutableDataProtocol {
         squeezeAny(count, to: &output, flag: .squeeze)
     }
@@ -159,29 +155,29 @@ public struct Xoodyak {
     }
 }
 
-extension Xoodyak {
-    public mutating func encrypt<D>(_ plaintext: D) -> [UInt8] where D: DataProtocol {
+public extension Xoodyak {
+    mutating func encrypt<D>(_ plaintext: D) -> [UInt8] where D: DataProtocol {
         var output = [UInt8]()
         output.reserveCapacity(plaintext.count + 16)
         encrypt(plaintext, to: &output)
         return output
     }
     
-    public mutating func decrypt<D>(_ ciphertext: D) -> [UInt8] where D: DataProtocol {
+    mutating func decrypt<D>(_ ciphertext: D) -> [UInt8] where D: DataProtocol {
         var output = [UInt8]()
         output.reserveCapacity(ciphertext.count + 16)
         decrypt(ciphertext, to: &output)
         return output
     }
     
-    public mutating func squeeze(_ count: Int) -> [UInt8] {
+    mutating func squeeze(_ count: Int) -> [UInt8] {
         var output = [UInt8]()
         output.reserveCapacity(count)
         squeeze(count, to: &output)
         return output
     }
     
-    public mutating func squeezeKey(_ count: Int) -> [UInt8] {
+    mutating func squeezeKey(_ count: Int) -> [UInt8] {
         var output = [UInt8]()
         output.reserveCapacity(count)
         squeezeKey(count, to: &output)
