@@ -71,16 +71,6 @@ final class XoodyakTests: XCTestCase {
             XCTAssertEqual(newTag, ct.suffix(tagCount))
         }
     }
-    
-    func testMore() {
-        // TODO: More tests
-    }
-
-    static var allTests = [
-        ("testHash", testHash),
-        ("testAEAD", testAEAD),
-        ("testMore", testMore),
-    ]
 }
 
 extension String {

@@ -13,8 +13,4 @@ final class XoodooTests: XCTestCase {
         XCTAssertEqual(xoodoo.a.1, [0xea36eba3, 0x14649e0a, 0xfe12521b, 0xfe2eff69])
         XCTAssertEqual(xoodoo.a.2, [0xf1826ca5, 0xfc4c41e0, 0x1597394f, 0xeb092faf])
     }
-    
-    static var allTests = [
-        ("testXoodoo", testXoodoo),
-    ]
 }
