@@ -1,6 +1,6 @@
 import XCTest
 import Foundation
-@testable import Xoodyak
+import Xoodyak
 
 final class XoodyakTests: XCTestCase {
     func path(for filename: String) -> URL {
