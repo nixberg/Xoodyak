@@ -7,14 +7,16 @@ public struct Xoodoo {
     
     public subscript(index: Int) -> UInt8 {
         get {
-            withUnsafePointer(to: a) {
+            assert((0..<48).contains(index))
+            return withUnsafePointer(to: a) {
                 $0.withMemoryRebound(to: UInt8.self, capacity: 48) {
                     $0[index]
                 }
             }
         }
         set {
-            withUnsafeMutablePointer(to: &a) {
+            assert((0..<48).contains(index))
+            return withUnsafeMutablePointer(to: &a) {
                 $0.withMemoryRebound(to: UInt8.self, capacity: 48) {
                     $0[index] = newValue
                 }
@@ -22,46 +24,34 @@ public struct Xoodoo {
         }
     }
     
-    public var last: UInt8 {
-        get {
-            self[47]
-        }
-        set {
-            self[47] = newValue
-        }
-    }
-    
     public mutating func permute() {
-        [0x058 as UInt32, 0x038, 0x3c0, 0x0d0, 0x120, 0x014, 0x060, 0x02c, 0x380, 0x0f0, 0x1a0, 0x012].forEach {
-            // θ:
+        func round(_ constant: UInt32) {
             let p = (a.0 ^ a.1 ^ a.2).rotated()
             let e = p.rotatingLanes(by: 5) ^ p.rotatingLanes(by: 14)
             a.0 ^= e
             a.1 ^= e
             a.2 ^= e
             
-            // ρ-west:
             a.1.rotate()
             a.2.rotateLanes(by: 11)
             
-            // ι:
-            a.0.x ^= $0
+            a.0.x ^= constant
             
-            // χ:
             a.0 ^= ~a.1 & a.2
             a.1 ^= ~a.2 & a.0
             a.2 ^= ~a.0 & a.1
             
-            // ρ-east:
             a.1.rotateLanes(by: 1)
             a.2.rhoEastPartTwo()
         }
+        
+        [0x058, 0x038, 0x3c0, 0x0d0, 0x120, 0x014, 0x060, 0x02c, 0x380, 0x0f0, 0x1a0, 0x012].forEach(round)
     }
 }
 
-extension SIMD4 where Scalar == UInt32 {
+fileprivate extension SIMD4 where Scalar == UInt32 {
     @inline(__always)
-    func rotatingLanes(by n: UInt32) -> SIMD4<UInt32> {
+    func rotatingLanes(by n: UInt32) -> Self {
         (self &>> (32 &- n)) | (self &<< n)
     }
     
@@ -71,7 +61,7 @@ extension SIMD4 where Scalar == UInt32 {
     }
     
     @inline(__always)
-    func rotated() -> SIMD4<UInt32> {
+    func rotated() -> Self {
         self[SIMD4(3, 0, 1, 2)]
     }
     
