@@ -58,7 +58,8 @@ public struct Xoodoo {
             a.2 ^= ~a.0 & a.1
             
             a.1.rotateLanes(by: 1)
-            a.2.rhoEastPartTwo()
+            a.2.rotateTwice()
+            a.2.rotateLanes(by: 8)
         }
         
         self.unpack()
@@ -102,16 +103,7 @@ fileprivate extension SIMD4 where Scalar == UInt32 {
     }
     
     @inline(__always)
-    mutating func rhoEastPartTwo() {
-        withUnsafeMutablePointer(to: &self) {
-            $0.withMemoryRebound(to: SIMD16<UInt8>.self, capacity: 1) {
-                $0.pointee = $0.pointee[SIMD16(
-                    11,  8,  9, 10,
-                    15, 12, 13, 14,
-                     3,  0,  1,  2,
-                     7,  4,  5,  6
-                )]
-            }
-        }
+    mutating func rotateTwice() {
+        self = self[SIMD4(2, 3, 0, 1)]
     }
 }
