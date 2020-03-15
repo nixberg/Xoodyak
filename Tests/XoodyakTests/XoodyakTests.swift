@@ -1,5 +1,4 @@
 import XCTest
-import Foundation
 import Xoodyak
 
 final class XoodyakTests: XCTestCase {
@@ -27,7 +26,7 @@ final class XoodyakTests: XCTestCase {
             var newMD = [UInt8](0..<32)
             xoodyak.squeeze(md.count, to: &newMD)
             
-            XCTAssertEqual(newMD[32...], md[...])
+            XCTAssertEqual(newMD.dropFirst(32), md[...])
         }
     }
     
@@ -58,7 +57,7 @@ final class XoodyakTests: XCTestCase {
             xoodyak.encrypt(pt, to: &newCT)
             xoodyak.squeeze(tagCount, to: &newCT)
             
-            XCTAssertEqual(newCT[32...], ct[...])
+            XCTAssertEqual(newCT.dropFirst(32), ct[...])
             
             xoodyak = Xoodyak(key: key, id: [], counter: [])
             xoodyak.absorb(nonce)
@@ -67,7 +66,7 @@ final class XoodyakTests: XCTestCase {
             xoodyak.decrypt(ct.prefix(pt.count), to: &newPT)
             let newTag = xoodyak.squeeze(tagCount)
             
-            XCTAssertEqual(newPT[32...], pt[...])
+            XCTAssertEqual(newPT.dropFirst(32), pt[...])
             XCTAssertEqual(newTag, ct.suffix(tagCount))
         }
     }

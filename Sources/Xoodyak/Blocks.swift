@@ -10,13 +10,13 @@ struct Blocks<D>: Sequence where D: DataProtocol {
     struct BlocksIterator<D>: IteratorProtocol where D: DataProtocol {
         var tail: D.SubSequence
         let rate: Int
-        var firstBlock = true
+        var isFirstBlock = true
         
         mutating func next() -> D.SubSequence? {
-            guard !tail.isEmpty || firstBlock else {
+            guard !tail.isEmpty || isFirstBlock else {
                 return nil
             }
-            firstBlock = false
+            isFirstBlock = false
             defer { tail = tail.dropFirst(rate) }
             return tail.prefix(rate)
         }

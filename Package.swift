@@ -1,4 +1,4 @@
-// swift-tools-version:5.1
+// swift-tools-version:5.2
 
 import PackageDescription
 
@@ -9,11 +9,9 @@ let package = Package(
             name: "Xoodyak",
             targets: ["Xoodyak"]),
     ],
-    dependencies: [],
     targets: [
         .target(
-            name: "Xoodoo",
-            dependencies: []),
+            name: "Xoodoo"),
         .target(
             name: "Xoodyak",
             dependencies: ["Xoodoo"]),

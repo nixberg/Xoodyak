@@ -24,6 +24,22 @@ public struct Xoodoo {
         }
     }
     
+    private mutating func unpack() {
+        for i in 0..<4 {
+            a.0[i] = UInt32(littleEndian: a.0[i])
+            a.1[i] = UInt32(littleEndian: a.1[i])
+            a.2[i] = UInt32(littleEndian: a.2[i])
+        }
+    }
+    
+    private mutating func pack() {
+        for i in 0..<4 {
+            a.0[i] = a.0[i].littleEndian
+            a.1[i] = a.1[i].littleEndian
+            a.2[i] = a.2[i].littleEndian
+        }
+    }
+    
     public mutating func permute() {
         func round(_ constant: UInt32) {
             let p = (a.0 ^ a.1 ^ a.2).rotated()
@@ -45,7 +61,22 @@ public struct Xoodoo {
             a.2.rhoEastPartTwo()
         }
         
-        [0x058, 0x038, 0x3c0, 0x0d0, 0x120, 0x014, 0x060, 0x02c, 0x380, 0x0f0, 0x1a0, 0x012].forEach(round)
+        self.unpack()
+        
+        round(0x058)
+        round(0x038)
+        round(0x3c0)
+        round(0x0d0)
+        round(0x120)
+        round(0x014)
+        round(0x060)
+        round(0x02c)
+        round(0x380)
+        round(0x0f0)
+        round(0x1a0)
+        round(0x012)
+        
+        self.pack()
     }
 }
 
