@@ -48,6 +48,10 @@ public struct Xoodyak {
         self.absorbKey(key: key, id: id, counter: counter)
     }
     
+    public init<Key, ID>(key: Key, id: ID?, counter: UInt64) where Key: DataProtocol, ID: DataProtocol {
+        self.init(key: key, id: id, counter: counter.littleEndianBytes)
+    }
+    
     private mutating func down(_ flag: Flag) {
         phase = .down
         xoodoo[0] ^= 0x01
@@ -212,5 +216,11 @@ public extension Xoodyak {
         output.reserveCapacity(count)
         self.squeezeKey(count, to: &output)
         return output
+    }
+}
+
+fileprivate extension UInt64 {
+    var littleEndianBytes: [UInt8] {
+        (0..<MemoryLayout<Self>.size).map { UInt8(truncatingIfNeeded: self &>> ($0 * 8)) }
     }
 }
