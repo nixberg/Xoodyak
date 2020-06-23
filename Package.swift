@@ -1,4 +1,4 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.3
 
 import PackageDescription
 
@@ -20,6 +20,10 @@ let package = Package(
             dependencies: ["Xoodoo"]),
         .testTarget(
             name: "XoodyakTests",
-            dependencies: ["Xoodyak"]),
+            dependencies: ["Xoodyak"],
+            resources: [
+                .copy("Resources/aead.json"),
+                .copy("Resources/hash.json")
+            ])
     ]
 )

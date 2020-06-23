@@ -2,36 +2,30 @@ import XCTest
 import Xoodyak
 
 final class XoodyakTests: XCTestCase {
-    func path(for filename: String) -> URL {
-        return URL(fileURLWithPath: #file)
-            .deletingLastPathComponent()
-            .appendingPathComponent(filename)
-    }
-    
-    func testHash() {
-        struct KAT: Decodable {
+    func testHash() throws {
+        struct Vector: Decodable {
             let msg: String
             let md: String
         }
         
-        let data = try! Data(contentsOf: path(for: "kats/hash.json"))
-        let kats = try! JSONDecoder().decode([KAT].self, from: data)
+        let url = Bundle.module.url(forResource: "hash", withExtension: "json")
+        let vectors = try JSONDecoder().decode([Vector].self, from: try Data(contentsOf: url!))
         
-        for kat in kats {
-            let msg = [UInt8](hex: kat.msg)
-            let md = [UInt8](hex: kat.md)
+        for vector in vectors {
+            let message = [UInt8](hex: vector.msg)
+            let digest = [UInt8](hex: vector.md)
             
             var xoodyak = Xoodyak()
-            xoodyak.absorb(msg)
-            var newMD = [UInt8](0..<32)
-            xoodyak.squeeze(md.count, to: &newMD)
+            xoodyak.absorb(message)
+            var newDigest = [UInt8](0..<32)
+            xoodyak.squeeze(digest.count, to: &newDigest)
             
-            XCTAssertEqual(newMD.dropFirst(32), md[...])
+            XCTAssertEqual(newDigest.dropFirst(32), digest[...])
         }
     }
     
-    func testAEAD() {
-        struct KAT: Decodable {
+    func testAEAD() throws {
+        struct Vector: Decodable {
             let key: String
             let nonce: String
             let pt: String
@@ -39,35 +33,35 @@ final class XoodyakTests: XCTestCase {
             let ct: String
         }
         
-        let data = try! Data(contentsOf: path(for: "kats/aead.json"))
-        let kats = try! JSONDecoder().decode([KAT].self, from: data)
+        let url = Bundle.module.url(forResource: "aead", withExtension: "json")
+        let vectors = try JSONDecoder().decode([Vector].self, from: try Data(contentsOf: url!))
         
-        for kat in kats  {
-            let key = [UInt8](hex: kat.key)
-            let nonce = [UInt8](hex: kat.nonce)
-            let pt = [UInt8](hex: kat.pt)
-            let ad = [UInt8](hex: kat.ad)
-            let ct = [UInt8](hex: kat.ct)
-            let tagCount = ct.count - pt.count
+        for vector in vectors  {
+            let key = [UInt8](hex: vector.key)
+            let nonce = [UInt8](hex: vector.nonce)
+            let plaintext = [UInt8](hex: vector.pt)
+            let additionalData = [UInt8](hex: vector.ad)
+            let ciphertext = [UInt8](hex: vector.ct)
+            let tagByteCount = ciphertext.count - plaintext.count
             
             var xoodyak = Xoodyak(key: key, id: [], counter: [])
             xoodyak.absorb(nonce)
-            xoodyak.absorb(ad)
-            var newCT = [UInt8](0..<32)
-            xoodyak.encrypt(pt, to: &newCT)
-            xoodyak.squeeze(tagCount, to: &newCT)
+            xoodyak.absorb(additionalData)
+            var newCiphertext = [UInt8](0..<32)
+            xoodyak.encrypt(plaintext, to: &newCiphertext)
+            xoodyak.squeeze(tagByteCount, to: &newCiphertext)
             
-            XCTAssertEqual(newCT.dropFirst(32), ct[...])
+            XCTAssertEqual(newCiphertext.dropFirst(32), ciphertext[...])
             
             xoodyak = Xoodyak(key: key, id: [], counter: [])
             xoodyak.absorb(nonce)
-            xoodyak.absorb(ad)
-            var newPT = [UInt8](0..<32)
-            xoodyak.decrypt(ct.prefix(pt.count), to: &newPT)
-            let newTag = xoodyak.squeeze(tagCount)
+            xoodyak.absorb(additionalData)
+            var newPlaintext = [UInt8](0..<32)
+            xoodyak.decrypt(ciphertext.prefix(plaintext.count), to: &newPlaintext)
+            let newTag = xoodyak.squeeze(tagByteCount)
             
-            XCTAssertEqual(newPT.dropFirst(32), pt[...])
-            XCTAssertEqual(newTag, ct.suffix(tagCount))
+            XCTAssertEqual(newPlaintext.dropFirst(32), plaintext[...])
+            XCTAssertEqual(newTag, ciphertext.suffix(tagByteCount))
         }
     }
 }
