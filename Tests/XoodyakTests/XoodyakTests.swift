@@ -12,12 +12,15 @@ final class XoodyakTests: XCTestCase {
         let vectors = try JSONDecoder().decode([Vector].self, from: try Data(contentsOf: url!))
         
         for vector in vectors {
+            let message = Array(hexString: vector.msg)
+            let digest  = Array(hexString: vector.md)
+            
             var xoodyak = Xoodyak()
-            xoodyak.absorb(Array(hexString: vector.msg))
+            xoodyak.absorb(message)
             var newDigest = [UInt8](0..<32)
             xoodyak.squeeze(vector.md.byteCount, to: &newDigest)
             
-            XCTAssertEqual(newDigest.dropFirst(32), Array(hexString: vector.md)[...])
+            XCTAssertEqual(newDigest.dropFirst(32), digest[...])
         }
     }
     
@@ -34,12 +37,12 @@ final class XoodyakTests: XCTestCase {
         let vectors = try JSONDecoder().decode([Vector].self, from: try Data(contentsOf: url!))
         
         for vector in vectors  {
-            let key = Array(hexString: vector.key)
-            let nonce = Array(hexString: vector.nonce)
-            let plaintext = Array(hexString: vector.pt)
+            let key            = Array(hexString: vector.key)
+            let nonce          = Array(hexString: vector.nonce)
+            let plaintext      = Array(hexString: vector.pt)
             let additionalData = Array(hexString: vector.ad)
-            let ciphertext = Array(hexString: vector.ct)
-            let tagByteCount = ciphertext.count - plaintext.count
+            let ciphertext     = Array(hexString: vector.ct)
+            let tagByteCount   = ciphertext.count - plaintext.count
             
             var encryptor = Xoodyak(key: key)
             encryptor.absorb(nonce)

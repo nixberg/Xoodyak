@@ -1,6 +1,25 @@
 import Foundation
 import Xoodoo
 
+fileprivate enum Phase {
+    case up
+    case down
+}
+
+fileprivate enum Mode {
+    case hash
+    case keyed
+}
+
+fileprivate struct Rate {
+    let rawValue: Int
+    static let hash        = Self(rawValue: 16)
+    static let keyedInput  = Self(rawValue: 44)
+    static let keyedOutput = Self(rawValue: 24)
+    static let ratchet     = Self(rawValue: 16)
+    static let counter     = Self(rawValue: 1)
+}
+
 fileprivate enum Flag: UInt8 {
     case zero       = 0x00
     case absorbKey  = 0x02
@@ -11,83 +30,59 @@ fileprivate enum Flag: UInt8 {
     case crypt      = 0x80
 }
 
-fileprivate enum Mode {
-    case hash
-    case keyed
-}
-
-fileprivate struct Rates {
-    static let hash    = 16
-    static let input   = 44
-    static let output  = 24
-    static let ratchet = 16
-    
-    let absorb: Int
-    let squeeze: Int
-}
-
-fileprivate enum Phase {
-    case up
-    case down
-}
-
 public struct Xoodyak {
-    private var mode: Mode
-    private var rates: Rates
     private var phase = Phase.up
-    private var xoodoo = Xoodoo()
+    private var state = Xoodoo()
+    private var mode  = Mode.hash
+    private var rates = (absorb: Rate.hash, squeeze: Rate.hash)
     
-    public init() {
-        mode = .hash
-        rates = Rates(absorb: Rates.hash, squeeze: Rates.hash)
-    }
+    public init() {}
     
     public init<Key, ID, Counter>(key: Key, id: ID, counter: Counter)
     where Key: DataProtocol, ID: DataProtocol, Counter: DataProtocol {
         precondition(!key.isEmpty)
-        self.init()
         self.absorbKey(key: key, id: id, counter: counter)
     }
     
     private mutating func down(_ flag: Flag) {
         phase = .down
-        xoodoo[0] ^= 0x01
-        xoodoo[47] ^= (mode == .hash) ? (flag.rawValue & 0x01) : flag.rawValue
+        state[0] ^= 0x01
+        state[47] ^= (mode == .hash) ? (flag.rawValue & 0x01) : flag.rawValue
     }
     
     private mutating func down<Block>(_ block: Block, _ flag: Flag) where Block: DataProtocol {
         phase = .down
         for (i, byte) in block.enumerated() {
-            xoodoo[i] ^= byte
+            state[i] ^= byte
         }
-        xoodoo[block.count] ^= 0x01
-        xoodoo[47] ^= (mode == .hash) ? (flag.rawValue & 0x01) : flag.rawValue
+        state[block.count] ^= 0x01
+        state[47] ^= (mode == .hash) ? (flag.rawValue & 0x01) : flag.rawValue
     }
     
     private mutating func up(_ flag: Flag) {
         phase = .up
         if mode != .hash {
-            xoodoo[47] ^= flag.rawValue
+            state[47] ^= flag.rawValue
         }
-        xoodoo.permute()
+        state.permute()
     }
     
     private mutating func up<Block>(_ count: Int, to block: inout Block, _ flag: Flag)
     where Block: MutableDataProtocol {
         self.up(flag)
         for i in 0..<count {
-            block.append(xoodoo[i])
+            block.append(state[i])
         }
     }
     
-    private mutating func absorbAny<Input>(_ input: Input, rate: Int, flag: Flag)
+    private mutating func absorbAny<Input>(_ input: Input, rate: Rate, flag: Flag)
     where Input: DataProtocol {
         var input = input[...]
         var flag = flag
         
         repeat {
-            let block = input.prefix(rate)
-            input = input.dropFirst(rate)
+            let block = input.prefix(rate.rawValue)
+            input = input.dropFirst(rate.rawValue)
             
             if phase != .up {
                 self.up(.zero)
@@ -102,17 +97,17 @@ public struct Xoodyak {
     private mutating func absorbKey<Key, ID, Counter>(key: Key, id: ID, counter: Counter)
     where Key: DataProtocol, ID: DataProtocol, Counter: DataProtocol {
         mode = .keyed
-        rates = Rates(absorb: Rates.input, squeeze: Rates.output)
+        rates = (absorb: .keyedInput, squeeze: .keyedOutput)
         
         var buffer = [UInt8](key)
         buffer.append(contentsOf: id)
         buffer.append(UInt8(truncatingIfNeeded: id.count))
-        precondition(buffer.count <= Rates.input)
+        precondition(buffer.count <= Rate.keyedInput.rawValue)
         
         self.absorbAny(buffer, rate: rates.absorb, flag: .absorbKey)
         
         if !counter.isEmpty {
-            self.absorbAny(counter, rate: 1, flag: .zero)
+            self.absorbAny(counter, rate: .counter, flag: .zero)
         }
     }
     
@@ -126,14 +121,14 @@ public struct Xoodyak {
         var flag = Flag.crypt
         
         repeat {
-            let block = input.prefix(Rates.output)
-            input = input.dropFirst(Rates.output)
+            let block = input.prefix(Rate.keyedOutput.rawValue)
+            input = input.dropFirst(Rate.keyedOutput.rawValue)
             
             self.up(flag)
             flag = .zero
             
             for (i, byte) in block.enumerated() {
-                output.append(byte ^ xoodoo[i])
+                output.append(byte ^ state[i])
             }
             
             if decrypt {
@@ -147,13 +142,13 @@ public struct Xoodyak {
     
     private mutating func squeezeAny<Output>(_ count: Int, to output: inout Output, flag: Flag)
     where Output: MutableDataProtocol  {
-        var blockSize = min(count, rates.squeeze)
+        var blockSize = min(count, rates.squeeze.rawValue)
         var count = count - blockSize
         
         self.up(blockSize, to: &output, flag)
         
         while count > 0 {
-            blockSize = min(count, rates.squeeze)
+            blockSize = min(count, rates.squeeze.rawValue)
             count -= blockSize
             
             self.down(.zero)
@@ -191,8 +186,8 @@ public struct Xoodyak {
     public mutating func ratchet() {
         precondition(mode == .keyed)
         var buffer = [UInt8]()
-        buffer.reserveCapacity(Rates.ratchet)
-        self.squeezeAny(Rates.ratchet, to: &buffer, flag: .ratchet)
+        buffer.reserveCapacity(Rate.ratchet.rawValue)
+        self.squeezeAny(Rate.ratchet.rawValue, to: &buffer, flag: .ratchet)
         self.absorbAny(buffer, rate: rates.absorb, flag: .zero)
     }
 }
