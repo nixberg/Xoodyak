@@ -13,11 +13,7 @@ enum Mode {
 
 struct Rate {
     let rawValue: Int
-    static let hash        = Self(rawValue: 16)
-    static let keyedInput  = Self(rawValue: 44)
-    static let keyedOutput = Self(rawValue: 24)
-    static let ratchet     = Self(rawValue: 16)
-    static let counter     = Self(rawValue: 1)
+    static let hash = Self(rawValue: 16)
 }
 
 enum Flag: UInt8 {

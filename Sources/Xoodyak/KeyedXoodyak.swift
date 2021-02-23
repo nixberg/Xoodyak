@@ -1,5 +1,11 @@
 import Foundation
-import Xoodoo
+
+fileprivate extension Rate {
+    static let keyedInput  = Self(rawValue: 44)
+    static let keyedOutput = Self(rawValue: 24)
+    static let ratchet     = Self(rawValue: 16)
+    static let counter     = Self(rawValue: 1)
+}
 
 public struct KeyedXoodyak {
     private var xoodyak = Xoodyak()
