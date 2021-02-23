@@ -44,7 +44,7 @@ final class XoodyakTests: XCTestCase {
             let ciphertext     = Array(hexString: vector.ct)
             let tagByteCount   = ciphertext.count - plaintext.count
             
-            var encryptor = Xoodyak(key: key)
+            var encryptor = KeyedXoodyak(key: key)
             encryptor.absorb(nonce)
             encryptor.absorb(additionalData)
             var decryptor = encryptor
