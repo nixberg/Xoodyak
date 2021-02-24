@@ -2,5 +2,5 @@
 
 # Xoodyak
 
-Swift implementation of [Xoodyak](https://csrc.nist.gov/CSRC/media/Projects/Lightweight-Cryptography/documents/round-1/spec-doc/Xoodyak-spec.pdf).
+Swift implementation of [Xoodyak](https://csrc.nist.gov/CSRC/media/Projects/lightweight-cryptography/documents/round-2/spec-doc-rnd2/Xoodyak-spec-round2.pdf).
 Experimental, do not use.
