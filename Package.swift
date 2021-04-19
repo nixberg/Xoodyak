@@ -9,6 +9,9 @@ let package = Package(
             name: "Xoodyak",
             targets: ["Xoodyak"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/nixberg/hexstring-swift", from: "0.1.0"),
+    ],
     targets: [
         .target(
             name: "Xoodoo"),
@@ -20,7 +23,10 @@ let package = Package(
             dependencies: ["Xoodoo"]),
         .testTarget(
             name: "XoodyakTests",
-            dependencies: ["Xoodyak"],
+            dependencies: [
+                .product(name: "HexString", package: "hexstring-swift"),
+                "Xoodyak",
+            ],
             resources: [
                 .copy("Resources/aead.json"),
                 .copy("Resources/hash.json")
