@@ -10,7 +10,7 @@ let package = Package(
             targets: ["Xoodyak"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/nixberg/hexstring-swift", from: "0.1.0"),
+        .package(url: "https://github.com/nixberg/hexstring-swift", from: "0.2.0"),
     ],
     targets: [
         .target(

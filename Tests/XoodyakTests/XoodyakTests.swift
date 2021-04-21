@@ -5,8 +5,8 @@ import Xoodyak
 final class XoodyakTests: XCTestCase {
     func testHash() throws {
         struct Vector: Decodable {
-            let message: HexString
-            let digest:  HexString
+            @HexString var message: [UInt8]
+            @HexString var digest:  [UInt8]
             
             private enum CodingKeys: String, CodingKey {
                 case message = "msg"
@@ -31,11 +31,11 @@ final class XoodyakTests: XCTestCase {
     
     func testAEAD() throws {
         struct Vector: Decodable {
-            let key:            HexString
-            let nonce:          HexString
-            let plaintext:      HexString
-            let additionalData: HexString
-            let ciphertext:     HexString
+            @HexString var key:            [UInt8]
+            @HexString var nonce:          [UInt8]
+            @HexString var plaintext:      [UInt8]
+            @HexString var additionalData: [UInt8]
+            @HexString var ciphertext:     [UInt8]
             
             private enum CodingKeys: String, CodingKey {
                 case key
