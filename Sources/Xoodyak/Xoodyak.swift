@@ -13,7 +13,7 @@ enum Mode {
 
 struct Rate {
     let rawValue: Int
-    static let hash = Self(rawValue: 16)
+    fileprivate static let hash = Self(rawValue: 16)
 }
 
 enum Flag: UInt8 {
@@ -36,23 +36,23 @@ public struct Xoodyak {
     
     mutating func down(_ flag: Flag) {
         phase = .down
-        state[0] ^= 0x01
-        state[47] ^= (mode == .hash) ? (flag.rawValue & 0x01) : flag.rawValue
+        state.first ^= 0x01
+        state.last ^= (mode == .hash) ? (flag.rawValue & 0x01) : flag.rawValue
     }
     
     mutating func down<Block>(_ block: Block, _ flag: Flag) where Block: DataProtocol {
         phase = .down
-        for (i, byte) in block.enumerated() {
+        for (i, byte) in zip(state.indices, block) {
             state[i] ^= byte
         }
         state[block.count] ^= 0x01
-        state[47] ^= (mode == .hash) ? (flag.rawValue & 0x01) : flag.rawValue
+        state.last ^= (mode == .hash) ? (flag.rawValue & 0x01) : flag.rawValue
     }
     
     mutating func up(_ flag: Flag) {
         phase = .up
         if mode != .hash {
-            state[47] ^= flag.rawValue
+            state.last ^= flag.rawValue
         }
         state.permute()
     }
@@ -60,9 +60,7 @@ public struct Xoodyak {
     mutating func up<Block>(_ count: Int, to block: inout Block, _ flag: Flag)
     where Block: MutableDataProtocol {
         self.up(flag)
-        for i in 0..<count {
-            block.append(state[i])
-        }
+        block.append(contentsOf: state.prefix(count))
     }
     
     mutating func absorbAny<Input>(_ input: Input, rate: Rate, flag: Flag)
@@ -100,10 +98,12 @@ public struct Xoodyak {
         }
     }
     
+    @inline(__always)
     public mutating func absorb<Input>(_ input: Input) where Input: DataProtocol {
         self.absorbAny(input, rate: rates.absorb, flag: .absorb)
     }
     
+    @inline(__always)
     public mutating func squeeze<Output>(_ count: Int, to output: inout Output)
     where Output: MutableDataProtocol {
         self.squeezeAny(count, to: &output, flag: .squeeze)

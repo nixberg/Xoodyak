@@ -18,8 +18,6 @@ final class XoodooTests: XCTestCase {
             0x4f, 0x39, 0x97, 0x15, 0xaf, 0x2f, 0x09, 0xeb
         ]
         
-        for (i, byte) in expected.enumerated() {
-            XCTAssertEqual(xoodoo[i], byte)
-        }
+        XCTAssert(xoodoo.elementsEqual(expected))
     }
 }

@@ -4,7 +4,7 @@ fileprivate extension Rate {
     static let keyedInput  = Self(rawValue: 44)
     static let keyedOutput = Self(rawValue: 24)
     static let ratchet     = Self(rawValue: 16)
-    static let counter     = Self(rawValue: 1)
+    static let counter     = Self(rawValue:  1)
 }
 
 public struct KeyedXoodyak {
@@ -13,14 +13,16 @@ public struct KeyedXoodyak {
     public init<Key, ID, Counter>(key: Key, id: ID, counter: Counter)
     where Key: DataProtocol, ID: DataProtocol, Counter: DataProtocol {
         precondition(!key.isEmpty)
+        precondition(key.count + id.count + 1 <= Rate.keyedInput.rawValue)
         
         xoodyak.mode = .keyed
         xoodyak.rates = (absorb: .keyedInput, squeeze: .keyedOutput)
         
-        var buffer = [UInt8](key)
+        var buffer: [UInt8] = []
+        buffer.reserveCapacity(key.count + id.count + 1)
+        buffer.append(contentsOf: key)
         buffer.append(contentsOf: id)
         buffer.append(UInt8(truncatingIfNeeded: id.count))
-        precondition(buffer.count <= Rate.keyedInput.rawValue)
         
         xoodyak.absorbAny(buffer, rate: xoodyak.rates.absorb, flag: .absorbKey)
         
@@ -34,7 +36,6 @@ public struct KeyedXoodyak {
         to output: inout Output,
         decrypt: Bool
     ) where Input: DataProtocol, Output: MutableDataProtocol {
-        
         var input = input[...]
         var flag = Flag.crypt
         
@@ -45,8 +46,8 @@ public struct KeyedXoodyak {
             xoodyak.up(flag)
             flag = .zero
             
-            for (i, byte) in block.enumerated() {
-                output.append(byte ^ xoodyak.state[i])
+            for (byte, stateByte) in zip(block, xoodyak.state) {
+                output.append(byte ^ stateByte)
             }
             
             if decrypt {
@@ -63,11 +64,13 @@ public struct KeyedXoodyak {
         xoodyak.absorbAny(input, rate: xoodyak.rates.absorb, flag: .absorb)
     }
     
+    @inline(__always)
     public mutating func encrypt<Input, Output>(_ plaintext: Input, to ciphertext: inout Output)
     where Input: DataProtocol, Output: MutableDataProtocol {
         self.crypt(plaintext, to: &ciphertext, decrypt: false)
     }
     
+    @inline(__always)
     public mutating func decrypt<Input, Output>(_ ciphertext: Input, to plaintext: inout Output)
     where Input: DataProtocol, Output: MutableDataProtocol {
         self.crypt(ciphertext, to: &plaintext, decrypt: true)
@@ -79,6 +82,7 @@ public struct KeyedXoodyak {
         xoodyak.squeezeAny(count, to: &output, flag: .squeeze)
     }
     
+    @inline(__always)
     public mutating func squeezeKey<Output>(_ count: Int, to output: inout Output)
     where Output: MutableDataProtocol {
         xoodyak.squeezeAny(count, to: &output, flag: .squeezeKey)
@@ -93,14 +97,17 @@ public struct KeyedXoodyak {
 }
 
 public extension KeyedXoodyak {
+    @inline(__always)
     init<Key>(key: Key) where Key: DataProtocol {
         self.init(key: key, id: [], counter: [])
     }
     
+    @inline(__always)
     init<Key, ID>(key: Key, id: ID) where Key: DataProtocol, ID: DataProtocol {
         self.init(key: key, id: id, counter: [])
     }
     
+    @inline(__always)
     init<Key, Counter>(key: Key, counter: Counter) where Key: DataProtocol, Counter: DataProtocol {
         self.init(key: key, id: [], counter: counter)
     }
