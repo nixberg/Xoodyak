@@ -100,6 +100,13 @@ public struct Xoodyak {
     
     @inline(__always)
     public mutating func absorb<Input>(_ input: Input)
+    where Input: Sequence, Input.Element == UInt8 {
+        let input = Array(input)
+        self.absorb(input)
+    }
+    
+    @inline(__always)
+    public mutating func absorb<Input>(_ input: Input)
     where Input: Collection, Input.Element == UInt8 {
         self.absorbAny(input, rate: rates.absorb, flag: .absorb)
     }

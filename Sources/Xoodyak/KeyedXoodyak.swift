@@ -66,8 +66,25 @@ public struct KeyedXoodyak {
     
     @inline(__always)
     public mutating func absorb<Input>(_ input: Input)
+    where Input: Sequence, Input.Element == UInt8 {
+        let input = Array(input)
+        xoodyak.absorb(input)
+    }
+    
+    @inline(__always)
+    public mutating func absorb<Input>(_ input: Input)
     where Input: Collection, Input.Element == UInt8 {
         xoodyak.absorbAny(input, rate: xoodyak.rates.absorb, flag: .absorb)
+    }
+    
+    @inline(__always)
+    public mutating func encrypt<Input, Output>(_ plaintext: Input, to ciphertext: inout Output)
+    where
+        Input: Sequence, Input.Element == UInt8,
+        Output: RangeReplaceableCollection, Output.Element == UInt8
+    {
+        let plaintext = Array(plaintext)
+        self.encrypt(plaintext, to: &ciphertext)
     }
     
     @inline(__always)
@@ -77,6 +94,16 @@ public struct KeyedXoodyak {
         Output: RangeReplaceableCollection, Output.Element == UInt8
     {
         self.crypt(plaintext, to: &ciphertext, decrypt: false)
+    }
+    
+    @inline(__always)
+    public mutating func decrypt<Input, Output>(_ ciphertext: Input, to plaintext: inout Output)
+    where
+        Input: Sequence, Input.Element == UInt8,
+        Output: RangeReplaceableCollection, Output.Element == UInt8
+    {
+        let ciphertext = Array(ciphertext)
+        self.decrypt(ciphertext, to: &plaintext)
     }
     
     @inline(__always)
@@ -101,7 +128,7 @@ public struct KeyedXoodyak {
     }
     
     public mutating func ratchet() {
-        var buffer = [UInt8]()
+        var buffer: [UInt8] = []
         buffer.reserveCapacity(Rate.ratchet.rawValue)
         xoodyak.squeezeAny(to: &buffer, count: Rate.ratchet.rawValue, flag: .ratchet)
         xoodyak.absorbAny(buffer, rate: xoodyak.rates.absorb, flag: .zero)
@@ -126,12 +153,26 @@ public extension KeyedXoodyak {
         self.init(key: key, id: [], counter: counter)
     }
     
+    @inline(__always)
+    mutating func encrypt<Input>(_ plaintext: Input) -> [UInt8]
+    where Input: Sequence, Input.Element == UInt8 {
+        let plaintext = Array(plaintext)
+        return self.encrypt(plaintext)
+    }
+    
     mutating func encrypt<Input>(_ plaintext: Input) -> [UInt8]
     where Input: Collection, Input.Element == UInt8 {
         var output = [UInt8]()
         output.reserveCapacity(plaintext.count + 16)
         self.encrypt(plaintext, to: &output)
         return output
+    }
+    
+    @inline(__always)
+    mutating func decrypt<Input>(_ ciphertext: Input) -> [UInt8]
+    where Input: Sequence, Input.Element == UInt8 {
+        let ciphertext = Array(ciphertext)
+        return self.decrypt(ciphertext)
     }
     
     mutating func decrypt<Input>(_ ciphertext: Input) -> [UInt8]
