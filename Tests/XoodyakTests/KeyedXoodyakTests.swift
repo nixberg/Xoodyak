@@ -33,13 +33,13 @@ final class KeyedXoodyakTests: XCTestCase {
             
             var newCiphertext = [UInt8](0..<32)
             encryptor.encrypt(vector.plaintext, to: &newCiphertext)
-            encryptor.squeeze(tagByteCount, to: &newCiphertext)
+            encryptor.squeeze(to: &newCiphertext, count: tagByteCount)
             
             XCTAssert(newCiphertext.dropFirst(32).elementsEqual(vector.ciphertext))
             
             var newPlaintext = [UInt8](0..<32)
             decryptor.decrypt(vector.ciphertext.prefix(vector.plaintext.count), to: &newPlaintext)
-            let newTag = decryptor.squeeze(tagByteCount)
+            let newTag = decryptor.squeeze(count: tagByteCount)
             
             XCTAssert(newPlaintext.dropFirst(32).elementsEqual(vector.plaintext))
             XCTAssert(newTag.elementsEqual(vector.ciphertext.suffix(tagByteCount)))

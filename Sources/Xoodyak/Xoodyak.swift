@@ -1,4 +1,3 @@
-import Foundation
 import Xoodoo
 
 enum Phase {
@@ -40,7 +39,8 @@ public struct Xoodyak {
         state.last ^= (mode == .hash) ? (flag.rawValue & 0x01) : flag.rawValue
     }
     
-    mutating func down<Block>(_ block: Block, _ flag: Flag) where Block: DataProtocol {
+    mutating func down<Block>(_ block: Block, _ flag: Flag)
+    where Block: Collection, Block.Element == UInt8 {
         phase = .down
         for (i, byte) in zip(state.indices, block) {
             state[i] ^= byte
@@ -57,14 +57,14 @@ public struct Xoodyak {
         state.permute()
     }
     
-    mutating func up<Block>(_ count: Int, to block: inout Block, _ flag: Flag)
-    where Block: MutableDataProtocol {
+    mutating func up<Output>(to output: inout Output, count: Int, _ flag: Flag)
+    where Output: RangeReplaceableCollection, Output.Element == UInt8 {
         self.up(flag)
-        block.append(contentsOf: state.prefix(count))
+        output.append(contentsOf: state.prefix(count))
     }
     
     mutating func absorbAny<Input>(_ input: Input, rate: Rate, flag: Flag)
-    where Input: DataProtocol {
+    where Input: Collection, Input.Element == UInt8 {
         var input = input[...]
         var flag = flag
         
@@ -82,39 +82,40 @@ public struct Xoodyak {
         } while !input.isEmpty
     }
     
-    mutating func squeezeAny<Output>(_ count: Int, to output: inout Output, flag: Flag)
-    where Output: MutableDataProtocol  {
+    mutating func squeezeAny<Output>(to output: inout Output, count: Int, flag: Flag)
+    where Output: RangeReplaceableCollection, Output.Element == UInt8 {
         var blockSize = min(count, rates.squeeze.rawValue)
         var count = count - blockSize
         
-        self.up(blockSize, to: &output, flag)
+        self.up(to: &output, count: blockSize, flag)
         
         while count > 0 {
             blockSize = min(count, rates.squeeze.rawValue)
             count -= blockSize
             
             self.down(.zero)
-            self.up(blockSize, to: &output, .zero)
+            self.up(to: &output, count: blockSize, .zero)
         }
     }
     
     @inline(__always)
-    public mutating func absorb<Input>(_ input: Input) where Input: DataProtocol {
+    public mutating func absorb<Input>(_ input: Input)
+    where Input: Collection, Input.Element == UInt8 {
         self.absorbAny(input, rate: rates.absorb, flag: .absorb)
     }
     
     @inline(__always)
-    public mutating func squeeze<Output>(_ count: Int, to output: inout Output)
-    where Output: MutableDataProtocol {
-        self.squeezeAny(count, to: &output, flag: .squeeze)
+    public mutating func squeeze<Output>(to output: inout Output, count: Int)
+    where Output: RangeReplaceableCollection, Output.Element == UInt8 {
+        self.squeezeAny(to: &output, count: count, flag: .squeeze)
     }
 }
 
 public extension Xoodyak {
-    mutating func squeeze(_ count: Int) -> [UInt8] {
+    mutating func squeeze(count: Int) -> [UInt8] {
         var output = [UInt8]()
         output.reserveCapacity(count)
-        self.squeeze(count, to: &output)
+        self.squeeze(to: &output, count: count)
         return output
     }
 }

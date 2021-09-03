@@ -1,5 +1,3 @@
-import Foundation
-
 public struct Xoodoo {
     private var state: [UInt8] = .init(repeating: 0, count: 48)
     
@@ -183,14 +181,5 @@ extension Xoodoo {
         set {
             self[47] = newValue
         }
-    }
-}
-
-extension Xoodoo: DataProtocol {
-    public typealias Regions = Array<UInt8>.Regions
-    
-    @inline(__always)
-    public var regions: Self.Regions {
-        state.regions
     }
 }

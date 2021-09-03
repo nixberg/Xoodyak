@@ -23,7 +23,7 @@ final class XoodyakTests: XCTestCase {
             xoodyak.absorb(vector.message)
             
             var newDigest = [UInt8](0..<32)
-            xoodyak.squeeze(vector.digest.count, to: &newDigest)
+            xoodyak.squeeze(to: &newDigest, count: vector.digest.count)
             
             XCTAssert(newDigest.dropFirst(32).elementsEqual(vector.digest))
         }

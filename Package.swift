@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.4
 
 import PackageDescription
 
@@ -10,7 +10,7 @@ let package = Package(
             targets: ["Xoodyak"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/nixberg/hexstring-swift", from: "0.2.0"),
+        .package(url: "https://github.com/nixberg/hexstring-swift", from: "0.3.0"),
     ],
     targets: [
         .target(
