@@ -10,11 +10,15 @@ let package = Package(
             targets: ["Xoodyak"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/nixberg/hexstring-swift", from: "0.3.0"),
+        .package(url: "https://github.com/nixberg/endianbytes-swift", from: "0.2.0"),
+        .package(url: "https://github.com/nixberg/hexstring-swift", from: "0.4.0"),
     ],
     targets: [
         .target(
-            name: "Xoodoo"),
+            name: "Xoodoo",
+            dependencies: [
+                .product(name: "EndianBytes", package: "endianbytes-swift"),
+            ]),
         .target(
             name: "Xoodyak",
             dependencies: ["Xoodoo"]),
