@@ -1,3 +1,4 @@
+import Duplex
 import Xoodoo
 
 enum Phase {
@@ -25,7 +26,11 @@ enum Flag: UInt8 {
     case crypt      = 0x80
 }
 
-public struct Xoodyak {
+public struct Xoodyak: Duplex {
+    public typealias Output = [UInt8]
+    
+    public static var defaultOutputByteCount = 32
+    
     var phase = Phase.up
     var state = Xoodoo()
     var mode  = Mode.hash
@@ -63,14 +68,14 @@ public struct Xoodyak {
         output.append(contentsOf: state.prefix(count))
     }
     
-    mutating func absorbAny<Input>(_ input: Input, rate: Rate, flag: Flag)
-    where Input: Collection, Input.Element == UInt8 {
-        var input = input[...]
+    mutating func absorbAny<Bytes>(contentsOf bytes: Bytes, rate: Rate, flag: Flag)
+    where Bytes: Collection, Bytes.Element == UInt8 {
+        var bytes = bytes[...]
         var flag = flag
         
         repeat {
-            let block = input.prefix(rate.rawValue)
-            input = input.dropFirst(rate.rawValue)
+            let block = bytes.prefix(rate.rawValue)
+            bytes = bytes.dropFirst(rate.rawValue)
             
             if phase != .up {
                 self.up(.zero)
@@ -79,7 +84,7 @@ public struct Xoodyak {
             self.down(block, flag)
             flag = .zero
             
-        } while !input.isEmpty
+        } while !bytes.isEmpty
     }
     
     mutating func squeezeAny<Output>(to output: inout Output, count: Int, flag: Flag)
@@ -98,31 +103,25 @@ public struct Xoodyak {
         }
     }
     
-    @inline(__always)
-    public mutating func absorb<Input>(_ input: Input)
-    where Input: Sequence, Input.Element == UInt8 {
-        let input = Array(input)
-        self.absorb(input)
+    public mutating func absorb<Bytes>(contentsOf bytes: Bytes)
+    where Bytes: Sequence, Bytes.Element == UInt8 {
+        self.absorb(contentsOf: Array(bytes))
     }
     
-    @inline(__always)
-    public mutating func absorb<Input>(_ input: Input)
-    where Input: Collection, Input.Element == UInt8 {
-        self.absorbAny(input, rate: rates.absorb, flag: .absorb)
+    public mutating func absorb<Bytes>(contentsOf bytes: Bytes)
+    where Bytes: Collection, Bytes.Element == UInt8 {
+        self.absorbAny(contentsOf: bytes, rate: rates.absorb, flag: .absorb)
     }
     
-    @inline(__always)
-    public mutating func squeeze<Output>(to output: inout Output, count: Int)
+    public mutating func squeeze<Output>(to output: inout Output, outputByteCount: Int)
     where Output: RangeReplaceableCollection, Output.Element == UInt8 {
-        self.squeezeAny(to: &output, count: count, flag: .squeeze)
+        self.squeezeAny(to: &output, count: outputByteCount, flag: .squeeze)
     }
-}
-
-public extension Xoodyak {
-    mutating func squeeze(count: Int) -> [UInt8] {
-        var output = [UInt8]()
-        output.reserveCapacity(count)
-        self.squeeze(to: &output, count: count)
+    
+    public mutating func squeeze(outputByteCount: Int) -> Self.Output {
+        var output: [UInt8] = []
+        output.reserveCapacity(outputByteCount)
+        self.squeeze(to: &output, outputByteCount: outputByteCount)
         return output
     }
 }

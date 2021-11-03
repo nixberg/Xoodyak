@@ -27,19 +27,21 @@ final class KeyedXoodyakTests: XCTestCase {
             let tagByteCount = vector.ciphertext.count - vector.plaintext.count
             
             var encryptor = KeyedXoodyak(key: vector.key)
-            encryptor.absorb(vector.nonce)
-            encryptor.absorb(vector.additionalData)
+            encryptor.absorb(contentsOf: vector.nonce)
+            encryptor.absorb(contentsOf: vector.additionalData)
             var decryptor = encryptor
             
-            var newCiphertext = [UInt8](0..<32)
-            encryptor.encrypt(vector.plaintext, to: &newCiphertext)
-            encryptor.squeeze(to: &newCiphertext, count: tagByteCount)
+            var newCiphertext: [UInt8] = .init(0..<32)
+            encryptor.encrypt(contentsOf: vector.plaintext, to: &newCiphertext)
+            encryptor.squeeze(to: &newCiphertext, outputByteCount: tagByteCount)
             
             XCTAssert(newCiphertext.dropFirst(32).elementsEqual(vector.ciphertext))
             
-            var newPlaintext = [UInt8](0..<32)
-            decryptor.decrypt(vector.ciphertext.prefix(vector.plaintext.count), to: &newPlaintext)
-            let newTag = decryptor.squeeze(count: tagByteCount)
+            var newPlaintext: [UInt8] = .init(0..<32)
+            decryptor.decrypt(
+                contentsOf: vector.ciphertext.prefix(vector.plaintext.count),
+                to: &newPlaintext)
+            let newTag = decryptor.squeeze(outputByteCount: tagByteCount)
             
             XCTAssert(newPlaintext.dropFirst(32).elementsEqual(vector.plaintext))
             XCTAssert(newTag.elementsEqual(vector.ciphertext.suffix(tagByteCount)))

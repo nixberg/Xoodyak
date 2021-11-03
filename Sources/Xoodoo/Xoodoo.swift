@@ -16,9 +16,9 @@ public struct Xoodoo {
     @inline(__always)
     private mutating func pack(_ a: SIMD4<UInt32>, _ b: SIMD4<UInt32>, _ c: SIMD4<UInt32>) {
         state.removeAll(keepingCapacity: true)
-        state.append(contentsOf: a.littleEndianBytes)
-        state.append(contentsOf: b.littleEndianBytes)
-        state.append(contentsOf: c.littleEndianBytes)
+        state.append(contentsOf: a.littleEndianBytes())
+        state.append(contentsOf: b.littleEndianBytes())
+        state.append(contentsOf: c.littleEndianBytes())
     }
     
     public mutating func permute() {
@@ -87,6 +87,11 @@ extension Xoodoo: RandomAccessCollection {
     public typealias Index = Array<UInt8>.Index
     
     @inline(__always)
+    public var count: Int {
+        48
+    }
+    
+    @inline(__always)
     public var startIndex: Self.Index {
         0
     }
@@ -111,8 +116,8 @@ extension Xoodoo: RandomAccessCollection {
         get {
             state[index]
         }
-        set {
-            state[index] = newValue
+        _modify {
+            yield &state[index]
         }
     }
     
@@ -121,8 +126,8 @@ extension Xoodoo: RandomAccessCollection {
         get {
             self[startIndex]
         }
-        set {
-            self[startIndex] = newValue
+        _modify {
+            yield &state[startIndex]
         }
     }
     
@@ -131,8 +136,8 @@ extension Xoodoo: RandomAccessCollection {
         get {
             self[endIndex - 1]
         }
-        set {
-            self[endIndex - 1] = newValue
+        _modify {
+            yield &state[endIndex - 1]
         }
     }
 }

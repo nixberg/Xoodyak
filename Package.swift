@@ -1,4 +1,4 @@
-// swift-tools-version:5.4
+// swift-tools-version:5.5
 
 import PackageDescription
 
@@ -10,7 +10,8 @@ let package = Package(
             targets: ["Xoodyak"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/nixberg/endianbytes-swift", from: "0.2.0"),
+        .package(url: "https://github.com/nixberg/crypto-traits-swift", from: "0.2.0"),
+        .package(url: "https://github.com/nixberg/endianbytes-swift", from: "0.3.0"),
         .package(url: "https://github.com/nixberg/hexstring-swift", from: "0.4.0"),
     ],
     targets: [
@@ -21,7 +22,10 @@ let package = Package(
             ]),
         .target(
             name: "Xoodyak",
-            dependencies: ["Xoodoo"]),
+            dependencies: [
+                .product(name: "Duplex", package: "crypto-traits-swift"),
+                "Xoodoo"
+            ]),
         .testTarget(
             name: "XoodooTests",
             dependencies: ["Xoodoo"]),

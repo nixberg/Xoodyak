@@ -1,3 +1,5 @@
+import Duplex
+
 fileprivate extension Rate {
     static let keyedInput  = Self(rawValue: 44)
     static let keyedOutput = Self(rawValue: 24)
@@ -5,8 +7,16 @@ fileprivate extension Rate {
     static let counter     = Self(rawValue:  1)
 }
 
-public struct KeyedXoodyak {
-    private var xoodyak = Xoodyak()
+public struct KeyedXoodyak: KeyedDuplexProtocol {
+    public typealias Output = Xoodyak.Output
+    
+    public typealias EncryptionOutput = [UInt8]
+    
+    public typealias DecryptionOutput = [UInt8]
+    
+    public static var defaultOutputByteCount = Xoodyak.defaultOutputByteCount
+    
+    private var xoodyak: Xoodyak = .init()
     
     public init<Key, ID, Counter>(key: Key, id: ID, counter: Counter)
     where
@@ -26,27 +36,27 @@ public struct KeyedXoodyak {
         buffer.append(contentsOf: id)
         buffer.append(UInt8(truncatingIfNeeded: id.count))
         
-        xoodyak.absorbAny(buffer, rate: xoodyak.rates.absorb, flag: .absorbKey)
+        xoodyak.absorbAny(contentsOf: buffer, rate: xoodyak.rates.absorb, flag: .absorbKey)
         
         if !counter.isEmpty {
-            xoodyak.absorbAny(counter, rate: .counter, flag: .zero)
+            xoodyak.absorbAny(contentsOf: counter, rate: .counter, flag: .zero)
         }
     }
     
-    private mutating func crypt<Input, Output>(
-        _ input: Input,
+    private mutating func crypt<Bytes, Output>(
+        contentsOf bytes: Bytes,
         to output: inout Output,
         decrypt: Bool
     ) where
-        Input: Collection, Input.Element == UInt8,
+        Bytes: Collection, Bytes.Element == UInt8,
         Output: RangeReplaceableCollection, Output.Element == UInt8
     {
-        var input = input[...]
+        var bytes = bytes[...]
         var flag = Flag.crypt
         
         repeat {
-            let block = input.prefix(Rate.keyedOutput.rawValue)
-            input = input.dropFirst(Rate.keyedOutput.rawValue)
+            let block = bytes.prefix(Rate.keyedOutput.rawValue)
+            bytes = bytes.dropFirst(Rate.keyedOutput.rawValue)
             
             xoodyak.up(flag)
             flag = .zero
@@ -61,137 +71,108 @@ public struct KeyedXoodyak {
                 xoodyak.down(block, .zero)
             }
             
-        } while !input.isEmpty
+        } while !bytes.isEmpty
     }
     
-    @inline(__always)
-    public mutating func absorb<Input>(_ input: Input)
-    where Input: Sequence, Input.Element == UInt8 {
-        let input = Array(input)
-        xoodyak.absorb(input)
+    public mutating func absorb<Bytes>(contentsOf bytes: Bytes)
+    where Bytes: Sequence, Bytes.Element == UInt8 {
+        xoodyak.absorb(contentsOf: bytes)
     }
     
-    @inline(__always)
-    public mutating func absorb<Input>(_ input: Input)
-    where Input: Collection, Input.Element == UInt8 {
-        xoodyak.absorbAny(input, rate: xoodyak.rates.absorb, flag: .absorb)
+    public mutating func absorb<Bytes>(contentsOf bytes: Bytes)
+    where Bytes: Collection, Bytes.Element == UInt8 {
+        xoodyak.absorb(contentsOf: bytes)
     }
     
-    @inline(__always)
-    public mutating func encrypt<Input, Output>(_ plaintext: Input, to ciphertext: inout Output)
+    public mutating func encrypt<Bytes, Output>(contentsOf bytes: Bytes, to output: inout Output)
     where
-        Input: Sequence, Input.Element == UInt8,
+        Bytes: Sequence, Bytes.Element == UInt8,
         Output: RangeReplaceableCollection, Output.Element == UInt8
     {
-        let plaintext = Array(plaintext)
-        self.encrypt(plaintext, to: &ciphertext)
+        self.encrypt(contentsOf: Array(bytes), to: &output)
     }
     
-    @inline(__always)
-    public mutating func encrypt<Input, Output>(_ plaintext: Input, to ciphertext: inout Output)
+    public mutating func encrypt<Bytes, Output>(contentsOf bytes: Bytes, to output: inout Output)
     where
-        Input: Collection, Input.Element == UInt8,
+        Bytes: Collection, Bytes.Element == UInt8,
         Output: RangeReplaceableCollection, Output.Element == UInt8
     {
-        self.crypt(plaintext, to: &ciphertext, decrypt: false)
+        self.crypt(contentsOf: bytes, to: &output, decrypt: false)
     }
     
-    @inline(__always)
-    public mutating func decrypt<Input, Output>(_ ciphertext: Input, to plaintext: inout Output)
+    public mutating func encrypt<Bytes>(contentsOf bytes: Bytes) -> Self.EncryptionOutput
+    where Bytes: Sequence, Bytes.Element == UInt8 {
+        var output: [UInt8] = []
+        self.encrypt(contentsOf: bytes, to: &output)
+        return output
+    }
+    
+    public mutating func decrypt<Bytes, Output>(contentsOf bytes: Bytes, to output: inout Output)
     where
-        Input: Sequence, Input.Element == UInt8,
+        Bytes: Sequence, Bytes.Element == UInt8,
         Output: RangeReplaceableCollection, Output.Element == UInt8
     {
-        let ciphertext = Array(ciphertext)
-        self.decrypt(ciphertext, to: &plaintext)
+        self.decrypt(contentsOf: Array(bytes), to: &output)
     }
     
-    @inline(__always)
-    public mutating func decrypt<Input, Output>(_ ciphertext: Input, to plaintext: inout Output)
+    public mutating func decrypt<Bytes, Output>(contentsOf bytes: Bytes, to output: inout Output)
     where
-        Input: Collection, Input.Element == UInt8,
+        Bytes: Collection, Bytes.Element == UInt8,
         Output: RangeReplaceableCollection, Output.Element == UInt8
     {
-        self.crypt(ciphertext, to: &plaintext, decrypt: true)
+        self.crypt(contentsOf: bytes, to: &output, decrypt: true)
     }
     
-    @inline(__always)
-    public mutating func squeeze<Output>(to output: inout Output, count: Int)
-    where Output: RangeReplaceableCollection, Output.Element == UInt8 {
-        xoodyak.squeezeAny(to: &output, count: count, flag: .squeeze)
+    public mutating func decrypt<Bytes>(contentsOf bytes: Bytes) -> Self.DecryptionOutput
+    where Bytes: Sequence, Bytes.Element == UInt8 {
+        var output: [UInt8] = []
+        self.decrypt(contentsOf: bytes, to: &output)
+        return output
     }
     
-    @inline(__always)
-    public mutating func squeezeKey<Output>(to output: inout Output, count: Int)
-    where Output: RangeReplaceableCollection, Output.Element == UInt8 {
-        xoodyak.squeezeAny(to: &output, count: count, flag: .squeezeKey)
+    public mutating func squeeze<Output>(to output: inout Output, outputByteCount: Int
+    ) where Output: RangeReplaceableCollection, Output.Element == UInt8 {
+        xoodyak.squeeze(to: &output, outputByteCount: outputByteCount)
+    }
+    
+    public mutating func squeeze(outputByteCount: Int) -> Self.Output {
+        xoodyak.squeeze(outputByteCount: outputByteCount)
+    }
+    
+    public mutating func squeezeKey<Output>(
+        to output: inout Output,
+        outputByteCount: Int = Self.defaultOutputByteCount
+    ) where Output: RangeReplaceableCollection, Output.Element == UInt8 {
+        xoodyak.squeezeAny(to: &output, count: outputByteCount, flag: .squeezeKey)
+    }
+    
+    mutating func squeezeKey(outputByteCount: Int = Self.defaultOutputByteCount) -> [UInt8] {
+        var output: [UInt8] = []
+        output.reserveCapacity(outputByteCount)
+        self.squeezeKey(to: &output, outputByteCount: outputByteCount)
+        return output
     }
     
     public mutating func ratchet() {
         var buffer: [UInt8] = []
         buffer.reserveCapacity(Rate.ratchet.rawValue)
         xoodyak.squeezeAny(to: &buffer, count: Rate.ratchet.rawValue, flag: .ratchet)
-        xoodyak.absorbAny(buffer, rate: xoodyak.rates.absorb, flag: .zero)
+        xoodyak.absorbAny(contentsOf: buffer, rate: xoodyak.rates.absorb, flag: .zero)
     }
 }
 
 public extension KeyedXoodyak {
-    @inline(__always)
     init<Key>(key: Key) where Key: Collection, Key.Element == UInt8 {
         self.init(key: key, id: [], counter: [])
     }
     
-    @inline(__always)
     init<Key, ID>(key: Key, id: ID)
     where Key: Collection, Key.Element == UInt8, ID: Collection, ID.Element == UInt8 {
         self.init(key: key, id: id, counter: [])
     }
     
-    @inline(__always)
     init<Key, Counter>(key: Key, counter: Counter)
     where Key: Collection, Key.Element == UInt8, Counter: Collection, Counter.Element == UInt8 {
         self.init(key: key, id: [], counter: counter)
-    }
-    
-    @inline(__always)
-    mutating func encrypt<Input>(_ plaintext: Input) -> [UInt8]
-    where Input: Sequence, Input.Element == UInt8 {
-        let plaintext = Array(plaintext)
-        return self.encrypt(plaintext)
-    }
-    
-    mutating func encrypt<Input>(_ plaintext: Input) -> [UInt8]
-    where Input: Collection, Input.Element == UInt8 {
-        var output = [UInt8]()
-        output.reserveCapacity(plaintext.count + 16)
-        self.encrypt(plaintext, to: &output)
-        return output
-    }
-    
-    @inline(__always)
-    mutating func decrypt<Input>(_ ciphertext: Input) -> [UInt8]
-    where Input: Sequence, Input.Element == UInt8 {
-        let ciphertext = Array(ciphertext)
-        return self.decrypt(ciphertext)
-    }
-    
-    mutating func decrypt<Input>(_ ciphertext: Input) -> [UInt8]
-    where Input: Collection, Input.Element == UInt8 {
-        var output = [UInt8]()
-        output.reserveCapacity(ciphertext.count + 16)
-        self.decrypt(ciphertext, to: &output)
-        return output
-    }
-    
-    @inline(__always)
-    mutating func squeeze(count: Int) -> [UInt8] {
-        xoodyak.squeeze(count: count)
-    }
-    
-    mutating func squeezeKey(count: Int) -> [UInt8] {
-        var output = [UInt8]()
-        output.reserveCapacity(count)
-        self.squeezeKey(to: &output, count: count)
-        return output
     }
 }

@@ -20,10 +20,10 @@ final class XoodyakTests: XCTestCase {
         for vector in vectors {
             var xoodyak = Xoodyak()
             
-            xoodyak.absorb(vector.message)
+            xoodyak.absorb(contentsOf: vector.message)
             
-            var newDigest = [UInt8](0..<32)
-            xoodyak.squeeze(to: &newDigest, count: vector.digest.count)
+            var newDigest: [UInt8] = .init(0..<32)
+            xoodyak.squeeze(to: &newDigest, outputByteCount: vector.digest.count)
             
             XCTAssert(newDigest.dropFirst(32).elementsEqual(vector.digest))
         }
