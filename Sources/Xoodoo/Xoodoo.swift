@@ -30,14 +30,14 @@ public struct Xoodoo {
         ]
         
         for roundConstant in roundConstants {
-            let p = (a ^ b ^ c).rotated()
-            let e = p.rotatingLanes(by: 5) ^ p.rotatingLanes(by: 14)
+            let p = (a ^ b ^ c).rotatingLanes(right: 1)
+            let e = p.rotated(left: 5) ^ p.rotated(left: 14)
             a ^= e
             b ^= e
             c ^= e
             
-            b.rotate()
-            c.rotateLanes(by: 11)
+            b.rotateLanes(right: 1)
+            c.rotate(left: 11)
             
             a.x ^= roundConstant
             
@@ -45,9 +45,9 @@ public struct Xoodoo {
             b ^= ~c & a
             c ^= ~a & b
             
-            b.rotateLanes(by: 1)
-            c.rotateTwice()
-            c.rotateLanes(by: 8)
+            b.rotate(left: 1)
+            c.rotateLanes(right: 2)
+            c.rotate(left: 8)
         }
         
         self.pack(a, b, c)
@@ -56,28 +56,31 @@ public struct Xoodoo {
 
 fileprivate extension SIMD4 where Scalar == UInt32 {
     @inline(__always)
-    func rotatingLanes(by n: UInt32) -> Self {
-        (self &>> (32 &- n)) | (self &<< n)
+    func rotated(left count: Scalar) -> Self {
+        let countComplement = Scalar(Scalar.bitWidth) - count
+        return (self &<< count) | (self &>> countComplement)
     }
     
     @inline(__always)
-    mutating func rotateLanes(by n: UInt32) {
-        self = self.rotatingLanes(by: n)
+    mutating func rotate(left count: Scalar) {
+        self = self.rotated(left: count)
     }
     
     @inline(__always)
-    func rotated() -> Self {
-        self[SIMD4(3, 0, 1, 2)]
+    func rotatingLanes(right count: Int) -> Self {
+        switch count {
+        case 1:
+            return self[SIMD4(3, 0, 1, 2)]
+        case 2:
+            return self[SIMD4(2, 3, 0, 1)]
+        default:
+            fatalError()
+        }
     }
     
     @inline(__always)
-    mutating func rotate() {
-        self = self.rotated()
-    }
-    
-    @inline(__always)
-    mutating func rotateTwice() {
-        self = self[SIMD4(2, 3, 0, 1)]
+    mutating func rotateLanes(right count: Int) {
+        self = self.rotatingLanes(right: count)
     }
 }
 
