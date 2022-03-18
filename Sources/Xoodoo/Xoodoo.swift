@@ -7,9 +7,9 @@ public struct Xoodoo {
     
     @inline(__always)
     private func unpack() -> (SIMD4<UInt32>, SIMD4<UInt32>, SIMD4<UInt32>) {
-        let a: SIMD4<UInt32> = .init(littleEndianBytes: state[00..<16])!
-        let b: SIMD4<UInt32> = .init(littleEndianBytes: state[16..<32])!
-        let c: SIMD4<UInt32> = .init(littleEndianBytes: state[32..<48])!
+        let a: SIMD4<UInt32> = .init(littleEndianBytes: state[00..<16])
+        let b: SIMD4<UInt32> = .init(littleEndianBytes: state[16..<32])
+        let c: SIMD4<UInt32> = .init(littleEndianBytes: state[32..<48])
         return (a, b, c)
     }
     
@@ -46,7 +46,7 @@ public struct Xoodoo {
             c ^= ~a & b
             
             b.rotate(left: 1)
-            c.rotateLanes(right: 2)
+            c.rotateLanes(right: 2) // TODO: rhoEastPartTwo
             c.rotate(left: 8)
         }
         
@@ -87,7 +87,7 @@ fileprivate extension SIMD4 where Scalar == UInt32 {
 extension Xoodoo: RandomAccessCollection {
     public typealias Element = UInt8
     
-    public typealias Index = Array<UInt8>.Index
+    public typealias Index = Int
     
     @inline(__always)
     public var count: Int {
@@ -102,16 +102,6 @@ extension Xoodoo: RandomAccessCollection {
     @inline(__always)
     public var endIndex: Self.Index {
         48
-    }
-    
-    @inline(__always)
-    public func index(after i: Self.Index) -> Self.Index {
-        state.index(after: i)
-    }
-    
-    @inline(__always)
-    public func index(before i: Self.Index) -> Self.Index {
-        state.index(before: i)
     }
     
     @inline(__always)
